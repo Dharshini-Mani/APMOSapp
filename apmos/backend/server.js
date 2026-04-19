@@ -18,7 +18,8 @@ app.use(cors({
     'http://localhost:3000',
     'http://127.0.0.1:3000',
     'http://localhost:5500',
-    'http://127.0.0.1:5500'
+    'http://127.0.0.1:5500',
+    'https://apmo-sapp.vercel.app'
   ],
   credentials: true
 }));
@@ -55,5 +56,5 @@ app.use('/api/*', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`APMOS Backend running on http://localhost:${PORT}`);
+  console.log(`APMOS Backend running on port ${PORT}`);
 });
