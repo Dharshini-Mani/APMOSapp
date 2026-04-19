@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>APMOS – Settings</title>
+  <link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+<div class="layout">
+
+  <header class="topbar">
+    <a href="index.html" class="logo">
+      <div class="logo-icon">⚡</div>
+      APMOS
+    </a>
+    <div class="search-bar">
+      <span class="search-icon">🔍</span>
+      <input type="text" placeholder="Search processes or tabs..."/>
+    </div>
+    <div class="topbar-spacer"></div>
+    <div class="battery-widget">
+      <span class="battery-icon">🔋</span>
+      <span class="battery-percent" id="batteryPct">--%</span>
+      <span class="battery-status" id="batteryStatus">–</span>
+    </div>
+  </header>
+
+  <aside class="sidebar">
+    <ul class="nav-list">
+      <li class="nav-item"><a href="index.html" class="nav-link" id="nav-overview"><span class="nav-icon">⬛</span> Overview</a></li>
+      <li class="nav-item"><a href="applications.html" class="nav-link" id="nav-applications"><span class="nav-icon">📦</span> Applications</a></li>
+      <li class="nav-item"><a href="network.html" class="nav-link" id="nav-network"><span class="nav-icon">🌐</span> Network</a></li>
+      <li class="nav-item"><a href="settings.html" class="nav-link" id="nav-settings"><span class="nav-icon">⚙️</span> Settings</a></li>
+    </ul>
+    <div class="sidebar-bottom">
+      <div class="system-health-label">System Health</div>
+      <div class="system-health-value" id="sidebarHealth">--%</div>
+      <div class="health-bar"><div class="health-fill" id="healthFill" style="width:0%"></div></div>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <div style="margin-bottom:6px;" class="page-title">System Settings</div>
+    <div style="color:var(--text-muted); font-size:13px; margin-bottom:24px;">Manage your dashboard preferences and system configurations.</div>
+
+    <div class="settings-grid">
+
+      <!-- Appearance & Feel -->
+      <div class="card">
+        <div class="settings-section-title">✨ Appearance &amp; Feel</div>
+
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">Color Theme</div>
+            <div class="settings-desc">Choose your preferred interface theme.</div>
+          </div>
+          <select class="settings-select" id="colorTheme" onchange="saveSetting('color_theme', this.value)">
+            <option value="dark">Dark Mode</option>
+            <option value="light">Light Mode</option>
+            <option value="system">System Default</option>
+          </select>
+        </div>
+
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">Dynamic Background</div>
+            <div class="settings-desc">Enable animated mesh background effects.</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="dynamicBg" onchange="saveSetting('dynamic_background', this.checked ? 1 : 0)"/>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">Compact Mode</div>
+            <div class="settings-desc">Display more data with condensed cards.</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="compactMode" onchange="saveSetting('compact_mode', this.checked ? 1 : 0)"/>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Performance & Data -->
+      <div class="card">
+        <div class="settings-section-title">⚡ Performance &amp; Data</div>
+
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">Data Refresh Rate</div>
+            <div class="settings-desc">How often system metrics are polled.</div>
+          </div>
+          <select class="settings-select" id="refreshRate" onchange="saveSetting('refresh_rate', parseInt(this.value))">
+            <option value="1">1s (Fast)</option>
+            <option value="3" selected>3s (Optimal)</option>
+            <option value="5">5s (Balanced)</option>
+            <option value="10">10s (Low Power)</option>
+          </select>
+        </div>
+
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">Auto-Pause Graph</div>
+            <div class="settings-desc">Pause charting when dashboard is inactive.</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="autoPause" onchange="saveSetting('auto_pause_graph', this.checked ? 1 : 0)"/>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">Real-Time Website Alerts</div>
+            <div class="settings-desc">Live pop-up notifications for active websites.</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="realtimeAlerts" onchange="saveSetting('realtime_alerts', this.checked ? 1 : 0)"/>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Notifications -->
+      <div class="card">
+        <div class="settings-section-title">🔔 Notifications</div>
+
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">High CPU Alerts</div>
+            <div class="settings-desc">Get notified when CPU exceeds 90%.</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="highCpuAlerts" onchange="saveSetting('high_cpu_alerts', this.checked ? 1 : 0)"/>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">Battery Drain Warning</div>
+            <div class="settings-desc">Alert when energy consumption peaks.</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="batteryWarning" onchange="saveSetting('battery_warning', this.checked ? 1 : 0)"/>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Account & Security -->
+      <div class="card">
+        <div class="settings-section-title">🔐 Account &amp; Security</div>
+
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">Session Timeout</div>
+            <div class="settings-desc">Auto logout after 30 minutes of inactivity.</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="sessionTimeout" onchange="saveSetting('session_timeout', this.checked ? 1 : 0)"/>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">Terminate Session</div>
+            <div class="settings-desc">End the current monitoring session safely.</div>
+          </div>
+          <button class="btn-danger" onclick="confirmLogout()">
+            🚪 Logout Safely
+          </button>
+        </div>
+
+        <div class="settings-row" style="border:none; padding-top:8px;">
+          <div>
+            <div class="settings-label" style="color:var(--text-muted);">Logged in as</div>
+          </div>
+          <div style="font-size:13px; color:var(--accent); font-weight:600;" id="currentUser">–</div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- Logout confirmation modal -->
+<div id="logoutModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:200; align-items:center; justify-content:center;">
+  <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:16px; padding:28px; max-width:360px; width:90%; text-align:center;">
+    <div style="font-size:36px; margin-bottom:12px;">🚪</div>
+    <div style="font-size:16px; font-weight:700; margin-bottom:8px;">Terminate Session?</div>
+    <div style="font-size:13px; color:var(--text-muted); margin-bottom:24px;">You will be signed out of APMOS and redirected to the login page.</div>
+    <div style="display:flex; gap:12px; justify-content:center;">
+      <button onclick="closeModal()" style="flex:1; padding:10px; background:var(--bg-secondary); border:1px solid var(--border); border-radius:8px; color:var(--text-primary); cursor:pointer; font-size:13px;">Cancel</button>
+      <button onclick="doLogout()" class="btn-danger" style="flex:1; justify-content:center;">Logout</button>
+    </div>
+  </div>
+</div>
+
+<script src="api.js"></script>
+<script src="utils.js"></script>
+<script>
+  requireAuth();
+  setActivePage('settings');
+
+  const user = getUser();
+  document.getElementById('currentUser').textContent = user.username || 'Unknown';
+
+  async function init() {
+    await loadSystemHealth();
+    await loadSettings();
+    await updateBattery();
+  }
+
+  async function loadSystemHealth() {
+    try {
+      const data = await api.metrics.systemHealth();
+      document.getElementById('sidebarHealth').textContent = data.health_percent + '%';
+      document.getElementById('healthFill').style.width = data.health_percent + '%';
+    } catch {}
+  }
+
+  async function loadSettings() {
+    try {
+      const data = await api.settings.get();
+      const s = data.settings;
+      if (!s) return;
+
+      document.getElementById('colorTheme').value = s.color_theme || 'dark';
+      document.getElementById('dynamicBg').checked = !!s.dynamic_background;
+      document.getElementById('compactMode').checked = !!s.compact_mode;
+      document.getElementById('refreshRate').value = s.refresh_rate || 3;
+      document.getElementById('autoPause').checked = !!s.auto_pause_graph;
+      document.getElementById('realtimeAlerts').checked = !!s.realtime_alerts;
+      document.getElementById('highCpuAlerts').checked = !!s.high_cpu_alerts;
+      document.getElementById('batteryWarning').checked = !!s.battery_warning;
+      document.getElementById('sessionTimeout').checked = !!s.session_timeout;
+    } catch (e) {
+      showToast('Failed to load settings', 'error');
+    }
+  }
+
+  async function saveSetting(key, value) {
+    try {
+      await api.settings.update({ [key]: value });
+      showToast('Setting saved', 'success');
+    } catch (e) {
+      showToast('Failed to save setting', 'error');
+    }
+  }
+
+  function confirmLogout() {
+    document.getElementById('logoutModal').style.display = 'flex';
+  }
+
+  function closeModal() {
+    document.getElementById('logoutModal').style.display = 'none';
+  }
+
+  function doLogout() {
+    api.auth.logout();
+  }
+
+  init();
+</script>
+</body>
+</html>

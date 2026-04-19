@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>APMOS – Network</title>
+  <link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+<div class="layout">
+
+  <header class="topbar">
+    <a href="index.html" class="logo">
+      <div class="logo-icon">⚡</div>
+      APMOS
+    </a>
+    <div class="search-bar">
+      <span class="search-icon">🔍</span>
+      <input type="text" placeholder="Search processes or tabs..."/>
+    </div>
+    <div class="topbar-spacer"></div>
+    <div class="battery-widget">
+      <span class="battery-icon">🔋</span>
+      <span class="battery-percent" id="batteryPct">--%</span>
+      <span class="battery-status" id="batteryStatus">–</span>
+    </div>
+  </header>
+
+  <aside class="sidebar">
+    <ul class="nav-list">
+      <li class="nav-item"><a href="index.html" class="nav-link" id="nav-overview"><span class="nav-icon">⬛</span> Overview</a></li>
+      <li class="nav-item"><a href="applications.html" class="nav-link" id="nav-applications"><span class="nav-icon">📦</span> Applications</a></li>
+      <li class="nav-item"><a href="network.html" class="nav-link" id="nav-network"><span class="nav-icon">🌐</span> Network</a></li>
+      <li class="nav-item"><a href="settings.html" class="nav-link" id="nav-settings"><span class="nav-icon">⚙️</span> Settings</a></li>
+    </ul>
+    <div class="sidebar-bottom">
+      <div class="system-health-label">System Health</div>
+      <div class="system-health-value" id="sidebarHealth">--%</div>
+      <div class="health-bar"><div class="health-fill" id="healthFill" style="width:0%"></div></div>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <div class="page-title" style="margin-bottom:20px;">Network Diagnostics</div>
+
+    <!-- Connections + Latency Cards -->
+    <div class="network-grid">
+      <div class="card" style="position:relative;">
+        <div class="metric-badge badge-green" id="connStatus">Active</div>
+        <div class="metric-card-label">Connections</div>
+        <div style="margin-top:10px;">
+          <span class="network-value" id="connCount">–</span>
+        </div>
+      </div>
+      <div class="card" style="position:relative;">
+        <div class="metric-badge badge-green" id="latencyStatus">Stable</div>
+        <div class="metric-card-label">Ping / Latency</div>
+        <div style="margin-top:10px;">
+          <span class="network-value" id="latencyVal">–</span>
+          <span class="network-unit">ms</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Network Interfaces Table -->
+    <div class="card">
+      <div class="chart-title" style="margin-bottom:16px;">Network Interfaces</div>
+      <table class="process-table" id="ifaceTable">
+        <thead>
+          <tr>
+            <th style="width:40%">Interface Name</th>
+            <th>Status</th>
+            <th>IPv4 Address</th>
+            <th>Speed</th>
+            <th>MAC Address</th>
+          </tr>
+        </thead>
+        <tbody id="ifaceBody">
+          <tr><td colspan="5" style="text-align:center;padding:32px;color:var(--text-muted);">Loading interfaces…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </main>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script src="api.js"></script>
+<script src="utils.js"></script>
+<script>
+  requireAuth();
+  setActivePage('network');
+
+  async function init() {
+    await loadSystemHealth();
+    await loadNetwork();
+    setInterval(loadNetwork, 5000);
+  }
+
+  async function loadSystemHealth() {
+    try {
+      const data = await api.metrics.systemHealth();
+      document.getElementById('sidebarHealth').textContent = data.health_percent + '%';
+      document.getElementById('healthFill').style.width = data.health_percent + '%';
+    } catch {}
+  }
+
+  async function loadNetwork() {
+    try {
+      const data = await api.metrics.live();
+      document.getElementById('batteryPct').textContent = data.battery_percent + '%';
+      document.getElementById('batteryStatus').textContent = data.battery_charging ? 'Charging' : 'Discharging';
+    } catch {}
+
+    try {
+      const data = await api.network.diagnostics();
+
+      document.getElementById('connCount').textContent = data.connections;
+      document.getElementById('latencyVal').textContent = data.latency_ms;
+
+      const latStatus = document.getElementById('latencyStatus');
+      latStatus.textContent = data.latency_status;
+      latStatus.className = 'metric-badge ' + (data.latency_status === 'Stable' ? 'badge-green' : data.latency_status === 'Moderate' ? 'badge-yellow' : 'badge-red');
+
+      const tbody = document.getElementById('ifaceBody');
+      const ifaces = data.interfaces || [];
+
+      if (ifaces.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--text-muted);">No network interfaces found</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = ifaces.map(iface => {
+        const statusClass = iface.status === 'Connected' ? 'status-connected' : 'badge-red';
+        const speed = iface.speed_mbps > 0 ? iface.speed_mbps + ' Mbit/s' : 'N/A';
+        return `
+          <tr>
+            <td style="color:var(--accent); font-weight:500;">${iface.name}</td>
+            <td><span class="status-badge ${statusClass}">${iface.status}</span></td>
+            <td style="color:var(--text-secondary); font-family:monospace;">${iface.ip_address}</td>
+            <td style="color:var(--text-secondary);">${speed}</td>
+            <td style="color:var(--text-muted); font-family:monospace; font-size:12px;">${iface.mac || 'N/A'}</td>
+          </tr>`;
+      }).join('');
+    } catch (e) {
+      document.getElementById('ifaceBody').innerHTML =
+        `<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--red);">Failed to load network data. Is the backend running?</td></tr>`;
+    }
+  }
+
+  init();
+</script>
+</body>
+</html>

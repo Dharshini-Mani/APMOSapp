@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>APMOS – Applications</title>
+  <link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+<div class="layout">
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <a href="index.html" class="logo">
+      <div class="logo-icon">⚡</div>
+      APMOS
+    </a>
+    <div class="search-bar">
+      <span class="search-icon">🔍</span>
+      <input type="text" placeholder="Search processes or tabs..." id="globalSearch" oninput="filterProcesses(this.value)"/>
+    </div>
+    <div class="topbar-spacer"></div>
+    <div class="battery-widget">
+      <span class="battery-icon">🔋</span>
+      <span class="battery-percent" id="batteryPct">--%</span>
+      <span class="battery-status" id="batteryStatus">–</span>
+    </div>
+  </header>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <ul class="nav-list">
+      <li class="nav-item"><a href="index.html" class="nav-link" id="nav-overview"><span class="nav-icon">⬛</span> Overview</a></li>
+      <li class="nav-item"><a href="applications.html" class="nav-link" id="nav-applications"><span class="nav-icon">📦</span> Applications</a></li>
+      <li class="nav-item"><a href="network.html" class="nav-link" id="nav-network"><span class="nav-icon">🌐</span> Network</a></li>
+      <li class="nav-item"><a href="settings.html" class="nav-link" id="nav-settings"><span class="nav-icon">⚙️</span> Settings</a></li>
+    </ul>
+    <div class="sidebar-bottom">
+      <div class="system-health-label">System Health</div>
+      <div class="system-health-value" id="sidebarHealth">--%</div>
+      <div class="health-bar"><div class="health-fill" id="healthFill" style="width:0%"></div></div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main-content">
+
+    <!-- Process List View -->
+    <div id="processView">
+      <div class="page-header">
+        <div class="page-title">Application Resource Usage</div>
+        <div class="tab-group">
+          <button class="tab-btn active" id="tabLive" onclick="switchProcessTab('live', this)">Live Processes</button>
+          <button class="tab-btn" onclick="switchProcessTab('today', this)">Today</button>
+          <button class="tab-btn" onclick="switchProcessTab('week', this)">This Week</button>
+          <button class="tab-btn" onclick="switchProcessTab('month', this)">This Month</button>
+        </div>
+      </div>
+
+      <div class="card" style="padding:0; overflow:hidden;">
+        <table class="process-table" id="processTable">
+          <thead>
+            <tr>
+              <th style="width:35%">Application</th>
+              <th>Memory</th>
+              <th>CPU</th>
+              <th>Usage</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="processTableBody">
+            <tr><td colspan="5" style="text-align:center; padding:32px; color:var(--text-muted);">Loading processes…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Browser Detail View (shown when clicking a Chrome row) -->
+    <div id="browserView" style="display:none;">
+      <div class="page-header">
+        <button onclick="showProcessView()" style="background:var(--bg-card); border:1px solid var(--border); color:var(--text-secondary); border-radius:8px; padding:8px 14px; cursor:pointer; font-size:13px;">
+          ← Back
+        </button>
+      </div>
+
+      <div class="card" style="margin-bottom:16px;">
+        <div class="browser-header">
+          <div style="font-size:36px;">🌐</div>
+          <div>
+            <div class="browser-info-name">Google Chrome</div>
+            <div class="browser-info-sub" id="chromeTabs">Active: – Tabs Monitoring</div>
+          </div>
+          <div class="browser-stats">
+            <div>
+              <div class="browser-stat-label">Processes</div>
+              <div class="browser-stat-value" id="chromeProcs">–</div>
+            </div>
+            <div>
+              <div class="browser-stat-label">Total RAM</div>
+              <div class="browser-stat-value" id="chromeRam">– MB</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-group" style="margin-bottom:16px; display:inline-flex;">
+          <button class="tab-btn active" onclick="switchBrowserTab('active', this)">Active Processes</button>
+          <button class="tab-btn" onclick="switchBrowserTab('history', this)">Recent History</button>
+        </div>
+
+        <!-- Active Processes Sub-Tab -->
+        <div id="browserActive">
+          <table class="process-table">
+            <thead>
+              <tr>
+                <th style="width:40%">Website Name</th>
+                <th>Time Used</th>
+                <th>Memory Usage</th>
+                <th>Performance</th>
+              </tr>
+            </thead>
+            <tbody id="browserActiveBody">
+              <tr><td colspan="4" style="text-align:center; padding:24px; color:var(--text-muted);">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Recent History Sub-Tab -->
+        <div id="browserHistory" style="display:none;">
+          <table class="process-table">
+            <thead>
+              <tr>
+                <th style="width:50%">Website Title</th>
+                <th style="width:30%">URL</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="browserHistoryBody">
+              <tr><td colspan="3" style="text-align:center; padding:24px; color:var(--text-muted);">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script src="api.js"></script>
+<script src="utils.js"></script>
+<script>
+  requireAuth();
+  setActivePage('applications');
+
+  let allProcesses = [];
+  let currentTab = 'live';
+  let refreshInterval = null;
+
+  async function init() {
+    await loadSystemHealth();
+    await loadProcesses();
+    refreshInterval = setInterval(async () => {
+      if (currentTab === 'live' && document.getElementById('processView').style.display !== 'none') {
+        await loadProcesses();
+      }
+    }, 3000);
+  }
+
+  async function loadSystemHealth() {
+    try {
+      const data = await api.metrics.systemHealth();
+      document.getElementById('sidebarHealth').textContent = data.health_percent + '%';
+      document.getElementById('healthFill').style.width = data.health_percent + '%';
+    } catch {}
+  }
+
+  async function loadProcesses() {
+    try {
+      const data = await api.metrics.live();
+      if (data) {
+        document.getElementById('batteryPct').textContent = data.battery_percent + '%';
+        document.getElementById('batteryStatus').textContent = data.battery_charging ? 'Charging' : 'Discharging';
+      }
+    } catch {}
+
+    try {
+      let data;
+      if (currentTab === 'live') {
+        data = await api.applications.processes();
+        allProcesses = data.processes || [];
+      } else {
+        data = await api.applications.history(currentTab);
+        allProcesses = (data.history || []).map(p => ({
+          name: p.name,
+          memory_mb: parseFloat(p.avg_memory).toFixed(1),
+          cpu_percent: parseFloat(p.avg_cpu).toFixed(1),
+          status: 'Active',
+          pid: '–',
+          icon: 'app',
+          last_seen: p.last_seen
+        }));
+      }
+      renderProcessTable(allProcesses);
+    } catch (e) {
+      document.getElementById('processTableBody').innerHTML =
+        `<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--red);">Failed to load processes. Is the backend running?</td></tr>`;
+    }
+  }
+
+  function renderProcessTable(procs) {
+    const tbody = document.getElementById('processTableBody');
+    if (!procs || procs.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--text-muted);">No processes found</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = procs.map(p => {
+      const statusClass = p.status === 'Critical' ? 'status-critical' :
+                          p.status === 'High Usage' ? 'status-high' : 'status-active';
+      const memColor = p.memory_mb > 500 ? 'var(--red)' : p.memory_mb > 200 ? 'var(--yellow)' : 'var(--text-primary)';
+      const cpuColor = p.cpu_percent > 20 ? 'var(--red)' : p.cpu_percent > 8 ? 'var(--yellow)' : 'var(--text-primary)';
+      const isChrome = p.name && p.name.toLowerCase().includes('chrome');
+
+      return `
+        <tr style="cursor:${isChrome ? 'pointer' : 'default'}"
+            onclick="${isChrome ? 'showBrowserView()' : ''}">
+          <td>
+            <div class="process-name-cell">
+              <div class="process-icon">${getProcessIcon(p.icon || 'app')}</div>
+              <div>
+                <div class="process-name">${p.name || 'Unknown'}</div>
+                <div class="process-pid">Process ID: ${p.pid || '–'}</div>
+              </div>
+            </div>
+          </td>
+          <td style="color:${memColor}; font-weight:600;">${p.memory_mb} MB</td>
+          <td style="color:${cpuColor}; font-weight:600;">${p.cpu_percent}% CPU</td>
+          <td style="color:var(--text-secondary);">${p.cpu_percent}%</td>
+          <td><span class="status-badge ${statusClass}">${p.status}</span></td>
+        </tr>`;
+    }).join('');
+  }
+
+  function filterProcesses(query) {
+    const q = query.toLowerCase();
+    const filtered = allProcesses.filter(p =>
+      (p.name || '').toLowerCase().includes(q) ||
+      String(p.pid || '').includes(q)
+    );
+    renderProcessTable(filtered);
+  }
+
+  function switchProcessTab(tab, btn) {
+    currentTab = tab;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    loadProcesses();
+  }
+
+  async function showBrowserView() {
+    document.getElementById('processView').style.display = 'none';
+    document.getElementById('browserView').style.display = 'block';
+    await loadBrowserData();
+  }
+
+  function showProcessView() {
+    document.getElementById('browserView').style.display = 'none';
+    document.getElementById('processView').style.display = 'block';
+  }
+
+  async function loadBrowserData() {
+    try {
+      const data = await api.applications.browser();
+      document.getElementById('chromeProcs').textContent = data.total_processes;
+      document.getElementById('chromeRam').textContent = data.total_ram_mb + ' MB';
+      document.getElementById('chromeTabs').textContent = `Active: ${data.active_tabs} Tabs Monitoring`;
+
+      // Active Processes tab
+      const activeBody = document.getElementById('browserActiveBody');
+      const activeProcs = data.active_processes || [];
+      if (activeProcs.length === 0) {
+        activeBody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:24px;color:var(--text-muted);">
+          No browser data yet. Add entries via the API or open Chrome.</td></tr>`;
+      } else {
+        activeBody.innerHTML = activeProcs.map(p => {
+          const perfClass = p.memory_mb > 400 ? 'status-high-ram' : 'status-stable';
+          const perfLabel = p.memory_mb > 400 ? 'High RAM' : 'Stable';
+          return `
+            <tr>
+              <td>
+                <div class="process-name-cell">
+                  <span style="font-size:16px;">🌐</span>
+                  <div>
+                    <div class="process-name" style="color:var(--accent);">${p.title}</div>
+                    <div class="process-pid">${p.processes} Processes</div>
+                  </div>
+                </div>
+              </td>
+              <td style="color:var(--text-secondary);">${timeAgo(p.last_seen)}</td>
+              <td style="font-weight:600;">${parseFloat(p.memory_mb || 0).toFixed(1)} MB</td>
+              <td><span class="status-badge ${perfClass}">${perfLabel}</span></td>
+            </tr>`;
+        }).join('');
+      }
+
+      // Recent History tab
+      const histBody = document.getElementById('browserHistoryBody');
+      const hist = data.recent_history || [];
+      if (hist.length === 0) {
+        histBody.innerHTML = `<tr><td colspan="3" style="text-align:center;padding:24px;color:var(--text-muted);">No history entries yet.</td></tr>`;
+      } else {
+        histBody.innerHTML = hist.map(h => `
+          <tr>
+            <td>
+              <div class="process-name-cell">
+                <span style="font-size:16px;">🌐</span>
+                <div>
+                  <div class="process-name" style="color:var(--accent);">${h.title}</div>
+                  <div class="process-pid">${h.title}</div>
+                </div>
+              </div>
+            </td>
+            <td style="color:var(--text-muted); font-size:12px;">${(h.url || '').substring(0, 40)}…</td>
+            <td style="color:var(--text-secondary); font-size:12px;">${timeAgo(h.recorded_at)}</td>
+          </tr>`).join('');
+      }
+    } catch (e) {
+      document.getElementById('browserActiveBody').innerHTML =
+        `<tr><td colspan="4" style="text-align:center;padding:24px;color:var(--red);">Failed to load browser data</td></tr>`;
+    }
+  }
+
+  function switchBrowserTab(tab, btn) {
+    document.querySelectorAll('#browserView .tab-btn').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    document.getElementById('browserActive').style.display = tab === 'active' ? '' : 'none';
+    document.getElementById('browserHistory').style.display = tab === 'history' ? '' : 'none';
+  }
+
+  init();
+</script>
+</body>
+</html>

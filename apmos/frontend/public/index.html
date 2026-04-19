@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>APMOS – Overview</title>
+  <link rel="stylesheet" href="styles.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+<div class="layout">
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <a href="index.html" class="logo">
+      <div class="logo-icon">⚡</div>
+      APMOS
+    </a>
+    <div class="search-bar">
+      <span class="search-icon">🔍</span>
+      <input type="text" placeholder="Search processes or tabs..." id="globalSearch"/>
+    </div>
+    <div class="topbar-spacer"></div>
+    <div class="battery-widget">
+      <span class="battery-icon">🔋</span>
+      <span class="battery-percent" id="batteryPct">--%</span>
+      <span class="battery-status" id="batteryStatus">–</span>
+    </div>
+  </header>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <ul class="nav-list">
+      <li class="nav-item">
+        <a href="index.html" class="nav-link active" id="nav-overview">
+          <span class="nav-icon">⬛</span> Overview
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="applications.html" class="nav-link" id="nav-applications">
+          <span class="nav-icon">📦</span> Applications
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="network.html" class="nav-link" id="nav-network">
+          <span class="nav-icon">🌐</span> Network
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="settings.html" class="nav-link" id="nav-settings">
+          <span class="nav-icon">⚙️</span> Settings
+        </a>
+      </li>
+    </ul>
+    <div class="sidebar-bottom">
+      <div class="system-health-label">System Health</div>
+      <div class="system-health-value" id="sidebarHealth">--%</div>
+      <div class="health-bar">
+        <div class="health-fill" id="healthFill" style="width:0%"></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main-content">
+
+    <!-- Metric Cards -->
+    <div class="metrics-grid">
+      <div class="card metric-card">
+        <div class="metric-badge badge-green" id="dataUsageBadge">+12%</div>
+        <div class="metric-card-label">Data Usage</div>
+        <div>
+          <span class="metric-card-value" id="dataUsageVal">--</span>
+          <span class="metric-card-unit">GB</span>
+        </div>
+      </div>
+      <div class="card metric-card">
+        <div class="metric-badge badge-green" id="procTimeBadge">– 0ms</div>
+        <div class="metric-card-label">Process Timing</div>
+        <div>
+          <span class="metric-card-value" id="procTimeVal">--</span>
+          <span class="metric-card-unit">ms</span>
+        </div>
+      </div>
+      <div class="card metric-card">
+        <div class="metric-badge badge-red" id="batteryDrainBadge">+4.5</div>
+        <div class="metric-card-label">Battery Drain</div>
+        <div>
+          <span class="metric-card-value" id="batteryDrainVal">--</span>
+          <span class="metric-card-unit">%</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- System Resource History Chart -->
+    <div class="card chart-card">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title">System Resource History</div>
+          <div class="chart-legend" style="margin-top:6px;">
+            <div class="legend-item">
+              <div class="legend-dot" style="background:#00e5b0"></div>
+              CPU Load
+            </div>
+            <div class="legend-item">
+              <div class="legend-dot" style="background:#ff4d6a"></div>
+              RAM Usage
+            </div>
+          </div>
+        </div>
+        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:8px;">
+          <div class="time-tabs">
+            <button class="time-tab active" onclick="loadHistory('live', this)">Live</button>
+            <button class="time-tab" onclick="loadHistory('24h', this)">24 Hours</button>
+            <button class="time-tab" onclick="loadHistory('7d', this)">7 Days</button>
+            <button class="time-tab" onclick="loadHistory('30d', this)">30 Days</button>
+          </div>
+          <div class="chart-peaks" id="chartPeaks">
+            <div class="peak-item">
+              <div class="peak-dot" style="background:#ff4d6a"></div>
+              Peak Data Usage: <span class="peak-date" id="peakDataDate">--</span>
+            </div>
+            <div class="peak-item">
+              <div class="peak-dot" style="background:#4d9fff"></div>
+              High Battery Drain: <span class="peak-date" id="peakBatteryDate">--</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="height:260px; position:relative;">
+        <canvas id="resourceChart"></canvas>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Toast container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script src="api.js"></script>
+<script src="utils.js"></script>
+<script>
+  requireAuth();
+  setActivePage('overview');
+
+  let resourceChart = null;
+  let liveInterval = null;
+
+  async function init() {
+    await loadLiveMetrics();
+    await loadHistory('live', document.querySelector('.time-tab.active'));
+    await loadSystemHealth();
+    // Auto-refresh every 3s
+    liveInterval = setInterval(async () => {
+      await loadLiveMetrics();
+    }, 3000);
+  }
+
+  async function loadLiveMetrics() {
+    try {
+      const data = await api.metrics.live();
+      document.getElementById('dataUsageVal').textContent = data.data_usage_gb;
+      document.getElementById('procTimeVal').textContent = Math.round(data.process_timing_ms || 99);
+      document.getElementById('batteryDrainVal').textContent = data.battery_percent;
+      document.getElementById('batteryPct').textContent = data.battery_percent + '%';
+      document.getElementById('batteryStatus').textContent = data.battery_charging ? 'Charging' : 'Discharging';
+    } catch (e) {
+      showToast('Failed to load live metrics', 'error');
+    }
+  }
+
+  async function loadSystemHealth() {
+    try {
+      const data = await api.metrics.systemHealth();
+      const h = data.health_percent;
+      document.getElementById('sidebarHealth').textContent = h + '%';
+      document.getElementById('healthFill').style.width = h + '%';
+    } catch {}
+  }
+
+  async function loadHistory(range, btn) {
+    document.querySelectorAll('.time-tab').forEach(t => t.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    try {
+      const data = await api.metrics.history(range);
+      document.getElementById('peakDataDate').textContent = data.peak_data_date || '--';
+      document.getElementById('peakBatteryDate').textContent = data.peak_battery_date || '--';
+      renderChart(data.data || []);
+    } catch {}
+  }
+
+  function renderChart(rows) {
+    const labels = rows.map(r => {
+      const d = new Date(r.recorded_at);
+      return d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+    });
+    const cpuData = rows.map(r => r.cpu_load);
+    const ramData = rows.map(r => r.ram_total > 0 ? parseFloat(((r.ram_used / r.ram_total) * 100).toFixed(1)) : 0);
+
+    const ctx = document.getElementById('resourceChart').getContext('2d');
+    if (resourceChart) resourceChart.destroy();
+
+    resourceChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          {
+            label: 'CPU Load',
+            data: cpuData,
+            borderColor: '#00e5b0',
+            backgroundColor: 'rgba(0,229,176,0.08)',
+            borderWidth: 2,
+            fill: true,
+            tension: 0.4,
+            pointRadius: 0,
+          },
+          {
+            label: 'RAM Usage',
+            data: ramData,
+            borderColor: '#ff4d6a',
+            backgroundColor: 'rgba(255,77,106,0.06)',
+            borderWidth: 2,
+            fill: true,
+            tension: 0.4,
+            pointRadius: 0,
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#181c22',
+            borderColor: '#22272f',
+            borderWidth: 1,
+            titleColor: '#8b94a8',
+            bodyColor: '#e8eaf0',
+          }
+        },
+        scales: {
+          x: {
+            ticks: { color: '#555e70', maxTicksLimit: 8, font: { size: 11 } },
+            grid: { color: 'rgba(34,39,47,0.5)' },
+            border: { display: false }
+          },
+          y: {
+            min: 0, max: 100,
+            ticks: { color: '#555e70', font: { size: 11 }, callback: v => v + '%' },
+            grid: { color: 'rgba(34,39,47,0.5)' },
+            border: { display: false }
+          }
+        }
+      }
+    });
+  }
+
+  init();
+</script>
+</body>
+</html>

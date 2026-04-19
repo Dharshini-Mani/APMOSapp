@@ -1,0 +1,12 @@
+{
+  "name": "apmos-frontend",
+  "version": "1.0.0",
+  "description": "APMOS Frontend - Application Performance Monitoring System",
+  "scripts": {
+    "start": "live-server public --port=3000 --no-browser",
+    "dev": "live-server public --port=3000"
+  },
+  "devDependencies": {
+    "live-server": "^1.2.2"
+  }
+}
